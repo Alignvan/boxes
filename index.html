@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隱適美找牙套</title>
+<meta name="robots" content="noindex">
+<style>
+  body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;margin:0;padding:12px;background:#f4f4f6;color:#222}
+  h1{font-size:22px;margin:4px 0 10px}
+  .box{background:#fff;border:3px solid;border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .hd{color:#fff;font-weight:700;font-size:18px;padding:10px 14px}
+  .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
+  .約{border-color:#222}.約 .hd{background:#222}
+  .到{border-color:#2c6ddb}.到 .hd{background:#2c6ddb}
+  .row{padding:12px 14px;border-top:1px solid #eee}
+  .hd + .row{border-top:none}
+  .top{display:flex;gap:10px}
+  .t{width:52px;font-size:16px;flex:none}
+  .m{flex:1;min-width:0}
+  .n{font-size:19px;font-weight:700}
+  .en{font-size:13px;color:#888}
+  .i{font-size:15px;margin-top:3px}
+  .w{font-size:15px;margin-top:3px;color:#d61a1a;font-weight:700}
+  .go{font-size:15px;margin-top:3px;color:#e85a0d;font-weight:700}
+  .g{font-size:14px;margin-top:3px;color:#999}
+  .bt{display:flex;gap:10px;margin-top:10px}
+  .b{flex:1;border-radius:12px;padding:8px 6px;text-align:center;font-size:17px;font-weight:700;font-family:inherit;line-height:1.3}
+  .off{border:2px dashed #bbb;color:#888;background:#fff}
+  .on{border:2px solid #2e9e3e;background:#2e9e3e;color:#fff}
+  .b small{display:block;font-size:13px;font-weight:400}
+  .off small{color:#aaa;font-size:12px}
+  .done{background:#e6f5e6}
+  .gray .n,.gray .i,.gray .t,.gray .en{color:#aaa}
+  .none{padding:14px;color:#999}
+  .legend{background:#fff;border-radius:14px;padding:10px 14px;margin-bottom:16px;font-size:14px;color:#555}
+  .legend .bt{margin-top:6px}
+  .legend .b{pointer-events:none}
+  .legend p{margin:8px 0 0}
+  .ft{font-size:13px;color:#888;text-align:center;margin:8px 0 30px;line-height:1.6}
+  #msg{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#d61a1a;color:#fff;padding:10px 16px;border-radius:10px;display:none}
+</style>
+</head>
+<body>
+<h1 id="title">載入中…</h1>
+<div class="legend">按鈕怎麼看：
+  <div class="bt">
+    <div class="b off">○ 寫上名字<small>還沒按（灰色虛線）</small></div>
+    <div class="b on">✓ 已整理<small>按過了（綠色＋時間）</small></div>
+  </div>
+  <p>到貨按「確認收貨」，盒子寫好中文名再按「寫上名字」。按錯再按一次取消。</p>
+</div>
+<div id="main"></div>
+<div class="ft"><span id="upd"></span><br><a href="#" onclick="load();return false">重新整理</a></div>
+<div id="msg"></div>
+<script>
+// GitHub 版（2026-11-21）：頁面放 GitHub、資料照樣在醫師的 Google 試算表（透過 Apps Script 讀寫）。病人資料不放 GitHub。
+const API = 'https://script.google.com/macros/s/AKfycby8MsLEAkGO_SRgHMQFzlC0l-1leYhMgbVq7SzHGZt1dJY9hLu-wJzJ3oZNEySo6T2V/exec';
+const CODE = (new URLSearchParams(location.search).get('k') || '').replace(/\W/g, '');
+const SAVE = 'data-' + CODE;                         // 手機記住上次的名單，一打開先顯示（開比較快）
+let data = null, stale = false;
+// 備查用（2026-11-20 使用者決定，網頁不顯示）：手機種類＋這支手機固定的亂數代號（清瀏覽器資料、無痕會換）
+const DEV = (() => {
+  const ua = navigator.userAgent;
+  let id = '';
+  try { id = localStorage.getItem('devId') || ''; if (!id) { id = '機-' + Math.random().toString(16).slice(2, 6).toUpperCase(); localStorage.setItem('devId', id); } }
+  catch (e) { id = '機-無法記住'; }
+  const os = /iPhone/.test(ua) ? 'iPhone iOS ' + ((ua.match(/OS (\d+)/) || [])[1] || '')
+           : /iPad|Macintosh.*Mobile/.test(ua) ? 'iPad'
+           : /Android/.test(ua) ? 'Android ' + ((ua.match(/Android ([\d.]+)/) || [])[1] || '')
+           : /Windows/.test(ua) ? 'Windows' : /Macintosh/.test(ua) ? 'Mac' : '其他';
+  const br = /Line\//.test(ua) ? 'LINE 內建' : /CriOS|Chrome\//.test(ua) && !/EdgA?\//.test(ua) ? 'Chrome'
+           : /SamsungBrowser/.test(ua) ? '三星瀏覽器' : /EdgA?\//.test(ua) ? 'Edge' : /FxiOS|Firefox/.test(ua) ? 'Firefox'
+           : /Safari/.test(ua) ? 'Safari' : '其他';
+  return {phone: os + ' ' + br, id: id, ua: ua};
+})();
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function lines(s, cls){return s ? String(s).split('\n').map(x => `<div class="${cls}">${esc(x)}</div>`).join('') : ''}
+
+function btn(k, kind, at, sec){                            // kind '收'／'整'；at = 按的時間（沒按是 undefined）
+  const word = kind === '收' ? (at ? '已收貨' : '確認收貨') : (at ? '已整理' : sec === '找' ? '找出牙套＆寫上名字' : '寫上名字');   // 橘框沒按寫「找出牙套＆寫上名字」（2026-11-20）
+    // 沒按 = 提醒在牙套盒寫病人中文名（盒子只有英文名），按了 = 已整理（2026-11-20 使用者）
+  return at ? `<button class="b on" onclick="tap(${k},'${kind}')">✓ ${word}<small>${esc(at)}</small></button>`
+            : `<button class="b off" onclick="tap(${k},'${kind}')">○ ${word}<small>還沒按</small></button>`;
+}
+
+function rowHtml(r, k){
+  const done = r.key && data.done[r.key], recv = r.key && data.recv[r.key];
+  const show = r.key && (r.can || done || recv);       // 寄到這家就有按鈕（還沒送到也可以先按，2026-11-20）；按過的一直顯示
+  let h = `<div class="row ${done ? 'done' : ''} ${r.gray ? 'gray' : ''}"><div class="top">`
+        + `<div class="t">${esc(r.time)}</div>`
+        + `<div class="m"><div class="n">${esc(r.name)}${r.sec === '約' && r.info ? '　' + esc(r.info) : ''}</div>`
+        + (r.en ? `<div class="en">${esc(r.en)}</div>` : '');
+  if (r.sec !== '約') {
+    h += lines(r.info, 'i') + lines(r.red, 'w');
+    if (r.sec === '找' && r.arrived && !done) h += `<div class="go">送到了還沒整理，請先找出來</div>`;
+    h += lines(r.gray, 'g');
+  }
+  h += `</div></div>`;
+  if (show) h += `<div class="bt">${r.sec === '到' ? btn(k, '收', recv, r.sec) : ''}${btn(k, '整', done, r.sec)}</div>`;
+  return h + `</div>`;
+}
+
+function render(){
+  if (data.err) { document.getElementById('title').textContent = data.err; return; }
+  const m = data.meta;
+  document.getElementById('title').textContent = data.clinic + '　隱適美';
+  document.getElementById('upd').textContent = '名單更新：' + (m.更新 || '') + (stale ? '　（更新中…）' : '');
+  let h = '';
+  for (const sec of ['找', '約', '到']) {
+    const rows = data.rows.map((r, k) => [r, k]).filter(([r]) => r.sec === sec);
+    h += `<div class="box ${sec}"><div class="hd">${esc(m[sec] || '')}${sec !== '到' && m[sec] ? '　' + rows.length + ' 位' : ''}</div>`;
+    if (!rows.length) h += `<div class="none">${sec === '找' ? '這天沒有要找的新牙套。' : sec === '約' ? '這天沒有隱適美病人。' : '最近一個月沒有寄來的牙套。'}</div>`;
+    for (const [r, k] of rows) h += rowHtml(r, k);
+    h += '</div>';
+  }
+  document.getElementById('main').innerHTML = h;
+}
+
+function call(body){
+  return fetch(API, {method: 'POST', body: JSON.stringify(body)}).then(r => r.json())   // text/plain，不會被瀏覽器擋
+    .then(d => { if (d.err) throw new Error(d.err); return d; });
+}
+
+function tap(k, kind){
+  const r = data.rows[k], map = kind === '收' ? data.recv : data.done, was = map[r.key];
+  const keep = {done: Object.assign({}, data.done), recv: Object.assign({}, data.recv)};
+  if (was) delete map[r.key];                         // 先變色，存好再換成真的時間
+  else { map[r.key] = '剛剛'; if (kind === '整' && !data.recv[r.key]) data.recv[r.key] = '剛剛'; }
+  render();
+  call({act: 'set', code: CODE, key: r.key, name: r.name, done: !was, kind: kind, dev: DEV})
+    .then(d => { data.done = d.done; data.recv = d.recv; keepLocal(); render(); })
+    .catch(() => { data.done = keep.done; data.recv = keep.recv; render(); say('沒存到，請再按一次'); });
+}
+
+function keepLocal(){ try { localStorage.setItem(SAVE, JSON.stringify(data)); } catch (e) {} }
+
+function say(t){const e=document.getElementById('msg');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
+
+function load(){
+  fetch(API + '?api=1&k=' + encodeURIComponent(CODE)).then(r => r.json())
+    .then(d => { data = d; stale = false; if (!d.err) keepLocal(); render(); })
+    .catch(() => { if (data) { stale = false; render(); } say('讀不到資料，請重新整理'); });
+}
+
+try { const old = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (old && !old.err) { data = old; stale = true; render(); } } catch (e) {}
+load();
+setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);   // 一分鐘自動更新，看得到別人按的
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });   // 切回來馬上更新
+</script>
+</body>
+</html>
