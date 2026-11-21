@@ -8,6 +8,8 @@
 <style>
   body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;margin:0;padding:12px;background:#f4f4f6;color:#222}
   h1{font-size:22px;margin:4px 0 10px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .logi{font-size:12px;color:#888;text-align:right;margin-top:6px;line-height:1.4;flex:none}   /* 右上角物流更新時間（2026-11-21） */
   .box{background:#fff;border:3px solid;border-radius:14px;margin-bottom:16px;overflow:hidden}
   .hd{color:#fff;font-weight:700;font-size:18px;padding:10px 14px}
   .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
@@ -44,7 +46,7 @@
 </style>
 </head>
 <body>
-<h1 id="title">載入中…</h1>
+<div class="head"><h1 id="title">載入中…</h1><div class="logi" id="logi"></div></div>
 <div class="legend">按鈕怎麼看：
   <div class="bt">
     <div class="b off">○ 寫上名字<small>還沒按（灰色虛線）</small></div>
@@ -120,6 +122,7 @@ function render(){
   if (data.err) { document.getElementById('title').textContent = data.err; return; }
   const m = data.meta;
   document.getElementById('title').textContent = data.clinic + '　隱適美';
+  document.getElementById('logi').innerHTML = m.物流 ? '物流更新<br>' + esc(m.物流) : '';
   document.getElementById('upd').textContent = '名單更新：' + (m.更新 || '') + (stale ? '　（更新中…）' : '');
   let h = '';
   for (const sec of ['找', '約', '到']) {
