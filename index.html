@@ -99,7 +99,7 @@ function rowHtml(r, k){
   if (r.sec !== '約') {
     h += lines(r.info, 'i') + lines(r.red, 'w');
     if (r.sec === '找' && r.arrived && !done) h += `<div class="go">送到了還沒整理，請先找出來</div>`;
-    if (nt) h += `<div class="go">已標成沒拿（${esc(nt)}）</div>`;
+    if (nt) h += `<div class="go">已標成還沒拿到（${esc(nt)}）</div>`;
     else h += lines(r.gray, 'g');
   }
   h += `</div>`;
@@ -109,7 +109,7 @@ function rowHtml(r, k){
   if (took || nt) {                                    // 其實沒拿／改回已拿（2026-11-21 使用者）
     const c = cd[r.key];
     h += `<div class="bt"><button class="b off" onclick="ntTap(${k})">`
-       + (nt ? `改回已拿<small>按錯了才按</small>` : c ? `${c.n} 秒後改成沒拿<small>再按一次取消</small>` : `其實沒拿<small>病人來了但沒拿牙套才按</small>`)
+       + (nt ? `改回已拿<small>按錯了才按</small>` : c ? `${c.n} 秒後改成還沒拿到<small>再按一次取消</small>` : `還沒拿到<small>約診未到或其他原因</small>`)
        + `</button></div>`;
   }
   return h + `</div>`;
