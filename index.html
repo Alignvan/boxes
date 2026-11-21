@@ -88,7 +88,7 @@ function btn(k, kind, at, sec){                            // kind '收'／'整'
 function rowHtml(r, k){
   const done = r.key && data.done[r.key], recv = r.key && data.recv[r.key];
   const show = r.key && (r.can || done || recv);       // 寄到這家就有按鈕（還沒送到也可以先按，2026-11-20）；按過的一直顯示
-  let h = `<div class="row ${done ? 'done' : ''} ${r.gray ? 'gray' : ''}"><div class="top">`
+  let h = `<div class="row ${done ? 'done' : ''} ${r.gray && r.sec !== '約' ? 'gray' : ''}"><div class="top">`
         + `<div class="t">${esc(r.time)}</div>`
         + `<div class="m"><div class="n">${esc(r.name)}${r.sec === '約' && r.info ? '　' + esc(r.info) : ''}</div>`
         + (r.en ? `<div class="en">${esc(r.en)}</div>` : '');
@@ -96,7 +96,7 @@ function rowHtml(r, k){
     h += lines(r.info, 'i') + lines(r.red, 'w');
     if (r.sec === '找' && r.arrived && !done) h += `<div class="go">送到了還沒整理，請先找出來</div>`;
     h += lines(r.gray, 'g');
-  }
+  } else h += lines(r.gray, 'g');                    // 約診列：灰字 = 約診本備註（2026-11-21）
   h += `</div></div>`;
   if (show) h += `<div class="bt">${r.sec === '到' ? btn(k, '收', recv, r.sec) : ''}${btn(k, '整', done, r.sec)}</div>`;
   return h + `</div>`;
