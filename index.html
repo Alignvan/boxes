@@ -89,20 +89,29 @@ function btn(k, kind, at, sec){                            // kind '收'／'整'
 
 function rowHtml(r, k){
   const done = r.key && data.done[r.key], recv = r.key && data.recv[r.key];
-  const show = r.key && (r.can || done || recv);       // 寄到這家就有按鈕（還沒送到也可以先按，2026-11-20）；按過的一直顯示
-  let h = `<div class="row ${done ? 'done' : ''} ${r.gray && r.sec !== '約' ? 'gray' : ''}"><div class="top">`
+  const nt = r.key && (data.nt || {})[r.key];             // 助理標「其實沒拿」的時間（2026-11-21）
+  const took = r.sec === '到' && /^病人已拿/.test(r.gray || '') && !nt;   // 程式判斷病人已拿
+  const show = r.key && (r.can || done || recv || nt);  // 寄到這家就有按鈕（還沒送到也可以先按，2026-11-20）；按過的一直顯示
+  let h = `<div class="row ${done ? 'done' : ''} ${r.gray && r.sec !== '約' && !nt ? 'gray' : ''}"><div class="top">`
         + `<div class="t">${esc(r.time)}</div>`
         + `<div class="m"><div class="n">${esc(r.name)}${r.sec === '約' && r.info ? '　' + esc(r.info) : ''}</div>`
         + (r.en ? `<div class="en">${esc(r.en)}</div>` : '');
   if (r.sec !== '約') {
     h += lines(r.info, 'i') + lines(r.red, 'w');
     if (r.sec === '找' && r.arrived && !done) h += `<div class="go">送到了還沒整理，請先找出來</div>`;
-    h += lines(r.gray, 'g');
+    if (nt) h += `<div class="go">已標成沒拿（${esc(nt)}）</div>`;
+    else h += lines(r.gray, 'g');
   }
   h += `</div>`;
   if (r.sec === '約' && r.gray) h += `<div class="memo">${esc(r.gray).replace(/\n/g, '<br>')}</div>`;   // 約診本備註放右邊（2026-11-21 使用者）
   h += `</div>`;
   if (show) h += `<div class="bt">${r.sec === '到' ? btn(k, '收', recv, r.sec) : ''}${btn(k, '整', done, r.sec)}</div>`;
+  if (took || nt) {                                    // 其實沒拿／改回已拿（2026-11-21 使用者）
+    const c = cd[r.key];
+    h += `<div class="bt"><button class="b off" onclick="ntTap(${k})">`
+       + (nt ? `改回已拿<small>按錯了才按</small>` : c ? `${c.n} 秒後改成沒拿<small>再按一次取消</small>` : `其實沒拿<small>病人來了但沒拿牙套才按</small>`)
+       + `</button></div>`;
+  }
   return h + `</div>`;
 }
 
@@ -117,7 +126,7 @@ function render(){
     const rows = data.rows.map((r, k) => [r, k]).filter(([r]) => r.sec === sec);
     h += `<div class="box ${sec}"><div class="hd">${esc(m[sec] || '')}${sec !== '到' && m[sec] ? '　' + rows.length + ' 位' : ''}</div>`;
     if (!rows.length) h += `<div class="none">${sec === '找' ? '這天沒有要找的新牙套。' : sec === '約' ? '這天沒有隱適美病人。' : '最近一個月沒有寄來的牙套。'}</div>`;
-    const taken = sec === '到' ? rows.filter(([r]) => /^病人已拿/.test(r.gray || '')) : [];   // 病人已拿的收成一行，點開才看（2026-11-21 使用者）
+    const taken = sec === '到' ? rows.filter(([r]) => /^病人已拿/.test(r.gray || '') && !(data.nt || {})[r.key]) : [];   // 病人已拿的收成一行，點開才看（2026-11-21 使用者）
     for (const e of rows) if (!taken.includes(e)) h += rowHtml(e[0], e[1]);
     if (taken.length) {
       h += `<div class="fold" onclick="openTaken = !openTaken; render()">${openTaken ? '▾ 收起' : '▸'} 病人已拿 ${taken.length} 筆${openTaken ? '' : '（點開看）'}</div>`;
@@ -140,11 +149,32 @@ function tap(k, kind){
   else { map[r.key] = '剛剛'; if (kind === '整' && !data.recv[r.key]) data.recv[r.key] = '剛剛'; }
   render();
   call({act: 'set', code: CODE, key: r.key, name: r.name, done: !was, kind: kind, dev: DEV})
-    .then(d => { data.done = d.done; data.recv = d.recv; keepLocal(); render(); })
+    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; keepLocal(); render(); })
     .catch(() => { data.done = keep.done; data.recv = keep.recv; render(); say('沒存到，請再按一次'); });
 }
 
 function keepLocal(){ try { localStorage.setItem(SAVE, JSON.stringify(data)); } catch (e) {} }
+
+const cd = {};                                        // 「其實沒拿」倒數中的 {包裹: {n, t}}
+function ntTap(k){
+  const r = data.rows[k];
+  if ((data.nt || {})[r.key]) return setNt(k, false); // 改回已拿：直接改
+  if (cd[r.key]) { clearInterval(cd[r.key].t); delete cd[r.key]; return render(); }   // 倒數中再按 = 取消
+  cd[r.key] = {n: 10, t: setInterval(() => {
+    if (--cd[r.key].n <= 0) { clearInterval(cd[r.key].t); delete cd[r.key]; setNt(k, true); } else render();
+  }, 1000)};
+  render();
+}
+
+function setNt(k, on){
+  const r = data.rows[k], keep = Object.assign({}, data.nt || {});
+  data.nt = Object.assign({}, data.nt || {});
+  if (on) data.nt[r.key] = '剛剛'; else delete data.nt[r.key];
+  render();
+  call({act: 'set', code: CODE, key: r.key, name: r.name, done: on, kind: '沒拿', dev: DEV})
+    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; keepLocal(); render(); })
+    .catch(() => { data.nt = keep; render(); say('沒存到，請再按一次'); });
+}
 
 function say(t){const e=document.getElementById('msg');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
 
