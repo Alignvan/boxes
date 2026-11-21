@@ -24,6 +24,7 @@
   .w{font-size:15px;margin-top:3px;color:#d61a1a;font-weight:700}
   .go{font-size:15px;margin-top:3px;color:#e85a0d;font-weight:700}
   .g{font-size:14px;margin-top:3px;color:#999}
+  .memo{flex:1;min-width:0;font-size:14px;color:#888;line-height:1.4;word-break:break-all}   /* 約診列右邊：約診本備註（2026-11-21） */
   .bt{display:flex;gap:10px;margin-top:10px}
   .b{flex:1;border-radius:12px;padding:8px 6px;text-align:center;font-size:17px;font-weight:700;font-family:inherit;line-height:1.3}
   .off{border:2px dashed #bbb;color:#888;background:#fff}
@@ -96,8 +97,10 @@ function rowHtml(r, k){
     h += lines(r.info, 'i') + lines(r.red, 'w');
     if (r.sec === '找' && r.arrived && !done) h += `<div class="go">送到了還沒整理，請先找出來</div>`;
     h += lines(r.gray, 'g');
-  } else h += lines(r.gray, 'g');                    // 約診列：灰字 = 約診本備註（2026-11-21）
-  h += `</div></div>`;
+  }
+  h += `</div>`;
+  if (r.sec === '約' && r.gray) h += `<div class="memo">${esc(r.gray).replace(/\n/g, '<br>')}</div>`;   // 約診本備註放右邊（2026-11-21 使用者）
+  h += `</div>`;
   if (show) h += `<div class="bt">${r.sec === '到' ? btn(k, '收', recv, r.sec) : ''}${btn(k, '整', done, r.sec)}</div>`;
   return h + `</div>`;
 }
