@@ -15,7 +15,8 @@
   .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
   .約{border-color:#222}.約 .hd{background:#222}
   .到{border-color:#2c6ddb}.到 .hd{background:#2c6ddb}
-  .xr{border-color:#7b3fc4}.xr .hd{background:#7b3fc4}   /* X 光還沒傳（2026-11-23） */
+  .xl{font-size:14px;color:#888;margin:-4px 2px 12px;line-height:1.5;cursor:pointer}   /* X 光還沒傳：標題下一行小字，點開才有按鈕（2026-11-23 使用者選，不急） */
+  .xl .row{padding:8px 0;border-top:1px solid #e4e4e4}.xl .n{font-size:15px}.xl .b{font-size:14px;padding:5px}
   .row{padding:12px 14px;border-top:1px solid #eee}
   .hd + .row{border-top:none}
   .top{display:flex;gap:10px}
@@ -180,14 +181,16 @@ function setNt(k, on){
     .catch(() => { data.nt = keep; render(); say('沒存到，請再按一次'); });
 }
 
+let openXr = false;                                   // X 光那行有沒有點開
 function xrayBox(){                                   // 每天早上 5:30 查完更新；X 光放進資料夾就自動不見
   const xs = data.xray, xr = data.xr || {};
-  let h = `<div class="box xr"><div class="hd">X 光還沒傳${xs.length ? '　' + xs.length + ' 位' : ''}</div>`;
-  if (!xs.length) h += `<div class="none">沒有還沒傳的 X 光。</div>`;
-  xs.forEach((x, i) => {
+  if (!xs.length) return '';
+  const sent = x => x.cloud || xr['X光:' + x.name];
+  let h = `<div class="xl" onclick="if (event.target.closest('button')) return; openXr = !openXr; render()">${openXr ? '▾' : '▸'} X 光還沒傳：`
+        + xs.map(x => esc(x.name) + (sent(x) ? '（已傳）' : `（資收 ${esc(x.visit)}）`)).join('、');
+  if (openXr) xs.forEach((x, i) => {
     const at = xr['X光:' + x.name];
-    h += `<div class="row ${at || x.cloud ? 'done' : ''}"><div class="top"><div class="m"><div class="n">${esc(x.name)}</div>`
-       + `<div class="i">資收 ${esc(x.visit)}</div></div></div><div class="bt">`
+    h += `<div class="row"><div class="n">${esc(x.name)}　<span class="en">資收 ${esc(x.visit)}</span></div><div class="bt">`
        + (x.cloud ? `<button class="b on" style="pointer-events:none">✓ 已傳<small>雲端上已經有了</small></button>`
           : at ? `<button class="b on" onclick="tapX(${i})">✓ 已傳<small>${esc(at)}</small></button>`
           : `<button class="b off" onclick="tapX(${i})">○ 已傳<small>傳到醫師雲端後按這裡</small></button>`)
