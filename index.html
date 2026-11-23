@@ -15,6 +15,7 @@
   .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
   .約{border-color:#222}.約 .hd{background:#222}
   .到{border-color:#2c6ddb}.到 .hd{background:#2c6ddb}
+  .xr{border-color:#7b3fc4}.xr .hd{background:#7b3fc4}   /* X 光還沒傳（2026-11-23） */
   .row{padding:12px 14px;border-top:1px solid #eee}
   .hd + .row{border-top:none}
   .top{display:flex;gap:10px}
@@ -124,7 +125,7 @@ function render(){
   document.getElementById('title').textContent = data.clinic + '　隱適美';
   document.getElementById('logi').innerHTML = m.物流 ? '上次物流更新時間<br>' + esc(m.物流) : '';
   document.getElementById('upd').textContent = '名單更新：' + (m.更新 || '') + (stale ? '　（更新中…）' : '');
-  let h = '';
+  let h = data.xray ? xrayBox() : '';                // 欣樂才有：新病人 X 光還沒傳（2026-11-23 使用者）
   for (const sec of ['找', '約', '到']) {
     const rows = data.rows.map((r, k) => [r, k]).filter(([r]) => r.sec === sec);
     h += `<div class="box ${sec}"><div class="hd">${esc(m[sec] || '')}${sec !== '到' && m[sec] ? '　' + rows.length + ' 位' : ''}</div>`;
@@ -152,7 +153,7 @@ function tap(k, kind){
   else { map[r.key] = '剛剛'; if (kind === '整' && !data.recv[r.key]) data.recv[r.key] = '剛剛'; }
   render();
   call({act: 'set', code: CODE, key: r.key, name: r.name, done: !was, kind: kind, dev: DEV})
-    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; keepLocal(); render(); })
+    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; data.xr = d.xr; keepLocal(); render(); })
     .catch(() => { data.done = keep.done; data.recv = keep.recv; render(); say('沒存到，請再按一次'); });
 }
 
@@ -175,8 +176,35 @@ function setNt(k, on){
   if (on) data.nt[r.key] = '剛剛'; else delete data.nt[r.key];
   render();
   call({act: 'set', code: CODE, key: r.key, name: r.name, done: on, kind: '沒拿', dev: DEV})
-    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; keepLocal(); render(); })
+    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; data.xr = d.xr; keepLocal(); render(); })
     .catch(() => { data.nt = keep; render(); say('沒存到，請再按一次'); });
+}
+
+function xrayBox(){                                   // 每天早上 5:30 查完更新；X 光放進資料夾就自動不見
+  const xs = data.xray, xr = data.xr || {};
+  let h = `<div class="box xr"><div class="hd">X 光還沒傳${xs.length ? '　' + xs.length + ' 位' : ''}</div>`;
+  if (!xs.length) h += `<div class="none">沒有還沒傳的 X 光。</div>`;
+  xs.forEach((x, i) => {
+    const at = xr['X光:' + x.name];
+    h += `<div class="row ${at || x.cloud ? 'done' : ''}"><div class="top"><div class="m"><div class="n">${esc(x.name)}</div>`
+       + `<div class="i">資收 ${esc(x.visit)}</div></div></div><div class="bt">`
+       + (x.cloud ? `<button class="b on" style="pointer-events:none">✓ 已傳<small>雲端上已經有了</small></button>`
+          : at ? `<button class="b on" onclick="tapX(${i})">✓ 已傳<small>${esc(at)}</small></button>`
+          : `<button class="b off" onclick="tapX(${i})">○ 已傳<small>傳到醫師雲端後按這裡</small></button>`)
+       + `</div></div>`;
+  });
+  return h + '</div>';
+}
+
+function tapX(i){
+  const x = data.xray[i], key = 'X光:' + x.name, keep = Object.assign({}, data.xr || {});
+  data.xr = Object.assign({}, data.xr || {});
+  const was = data.xr[key];
+  if (was) delete data.xr[key]; else data.xr[key] = '剛剛';
+  render();
+  call({act: 'set', code: CODE, key: key, name: x.name, done: !was, kind: 'X光', dev: DEV})
+    .then(d => { data.done = d.done; data.recv = d.recv; data.nt = d.nt; data.xr = d.xr; keepLocal(); render(); })
+    .catch(() => { data.xr = keep; render(); say('沒存到，請再按一次'); });
 }
 
 function say(t){const e=document.getElementById('msg');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
