@@ -184,7 +184,7 @@ function setNt(k, on){
 let openXr = false;                                   // X 光那行有沒有點開
 function xrayBox(){                                   // 每天早上 5:30 查完更新；X 光放進資料夾就自動不見
   const xs = data.xray, xr = data.xr || {};
-  if (!xs.length) return '';
+  if (xs.every(x => x.cloud || xr['X光:' + x.name])) return '';   // 沒人或全部已傳 → 整行不顯示（2026-11-24 使用者）
   const sent = x => x.cloud || xr['X光:' + x.name];
   let h = `<div class="xl" onclick="if (event.target.closest('button')) return; openXr = !openXr; render()">${openXr ? '▾' : '▸'} X 光還沒傳：`
         + xs.map(x => esc(x.name) + (sent(x) ? '（已傳）' : `（資收 ${esc(x.visit)}）`)).join('、');
