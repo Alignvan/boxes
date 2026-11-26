@@ -13,6 +13,7 @@
   .box{background:#fff;border:3px solid;border-radius:14px;margin-bottom:16px;overflow:hidden}
   .hd{color:#fff;font-weight:700;font-size:18px;padding:10px 14px}
   .YA{border-color:#7b3fc4}.YA .hd{background:#7b3fc4}
+  .yr{flex:none;text-align:right;font-size:15px;line-height:1.5;padding-top:2px}   /* YA!SMILE 一人一行、到貨狀態放右邊（2026-11-26 醫師） */
   .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
   .約{border-color:#222}.約 .hd{background:#222}
   .到{border-color:#2c6ddb}.到 .hd{background:#2c6ddb}
@@ -93,6 +94,8 @@ function btn(k, kind, at, sec){                            // kind '收'／'整'
 }
 
 function rowHtml(r, k){
+  if (r.sec === 'YA') return `<div class="row"><div class="top"><div class="t">${esc(r.time)}</div><div class="m"><div class="n">${esc(r.name)}</div></div>`
+    + `<div class="yr">${esc(r.info)}${r.red ? `<div class="w" style="margin-top:0">${esc(r.red)}</div>` : ''}</div></div></div>`;
   const done = r.key && data.done[r.key], recv = r.key && data.recv[r.key];
   const nt = r.key && (data.nt || {})[r.key];             // 助理標「其實沒拿」的時間（2026-11-21）
   const took = r.sec === '到' && /^病人已拿/.test(r.gray || '') && !nt;   // 程式判斷病人已拿
@@ -124,14 +127,14 @@ let openTaken = false;                               // 病人已拿那一行有
 function render(){
   if (data.err) { document.getElementById('title').textContent = data.err; return; }
   const m = data.meta;
-  document.getElementById('title').textContent = data.clinic + '　隱適美';
+  document.getElementById('title').textContent = data.clinic;
   document.getElementById('logi').innerHTML = m.物流 ? '上次物流更新時間<br>' + esc(m.物流) : '';
   document.getElementById('upd').textContent = '名單更新：' + (m.更新 || '') + (stale ? '　（更新中…）' : '');
   let h = data.xray ? xrayBox() : '';                // 欣樂才有：新病人 X 光還沒傳（2026-11-23 使用者）
   for (const sec of ['YA', '找', '約', '到']) {
     const rows = data.rows.map((r, k) => [r, k]).filter(([r]) => r.sec === sec);
     if (sec === 'YA' && !rows.length) continue;      // YA!SMILE 欄（2026-11-26 醫師）：下次約診有 YA!SMILE 牙套的才出現
-    const head = sec === 'YA' ? 'YA!SMILE　' + (m.約 || '').replace(/^下次約診\s*/, '') : (m[sec] || '');
+    const head = sec === 'YA' ? 'YA!SMILE 維持器　' + (m.約 || '').replace(/^.*下次約診\s*/, '') : (m[sec] || '');
     h += `<div class="box ${sec}"><div class="hd">${esc(head)}${sec !== '到' && head ? '　' + rows.length + ' 位' : ''}</div>`;
     if (!rows.length) h += `<div class="none">${sec === '找' ? '這天沒有要找的新牙套。' : sec === '約' ? '這天沒有隱適美病人。' : '最近一個月沒有寄來的牙套。'}</div>`;
     const taken = sec === '到' ? rows.filter(([r]) => /^病人已拿/.test(r.gray || '') && !(data.nt || {})[r.key]) : [];   // 病人已拿的收成一行，點開才看（2026-11-21 使用者）
