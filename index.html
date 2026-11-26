@@ -12,6 +12,7 @@
   .logi{font-size:12px;color:#888;text-align:right;margin-top:6px;line-height:1.4;flex:none}   /* 右上角物流更新時間（2026-11-21） */
   .box{background:#fff;border:3px solid;border-radius:14px;margin-bottom:16px;overflow:hidden}
   .hd{color:#fff;font-weight:700;font-size:18px;padding:10px 14px}
+  .YA{border-color:#7b3fc4}.YA .hd{background:#7b3fc4}
   .找{border-color:#e85a0d}.找 .hd{background:#e85a0d}
   .約{border-color:#222}.約 .hd{background:#222}
   .到{border-color:#2c6ddb}.到 .hd{background:#2c6ddb}
@@ -127,9 +128,11 @@ function render(){
   document.getElementById('logi').innerHTML = m.物流 ? '上次物流更新時間<br>' + esc(m.物流) : '';
   document.getElementById('upd').textContent = '名單更新：' + (m.更新 || '') + (stale ? '　（更新中…）' : '');
   let h = data.xray ? xrayBox() : '';                // 欣樂才有：新病人 X 光還沒傳（2026-11-23 使用者）
-  for (const sec of ['找', '約', '到']) {
+  for (const sec of ['YA', '找', '約', '到']) {
     const rows = data.rows.map((r, k) => [r, k]).filter(([r]) => r.sec === sec);
-    h += `<div class="box ${sec}"><div class="hd">${esc(m[sec] || '')}${sec !== '到' && m[sec] ? '　' + rows.length + ' 位' : ''}</div>`;
+    if (sec === 'YA' && !rows.length) continue;      // YA!SMILE 欄（2026-11-26 醫師）：下次約診有 YA!SMILE 牙套的才出現
+    const head = sec === 'YA' ? 'YA!SMILE　' + (m.約 || '').replace(/^下次約診\s*/, '') : (m[sec] || '');
+    h += `<div class="box ${sec}"><div class="hd">${esc(head)}${sec !== '到' && head ? '　' + rows.length + ' 位' : ''}</div>`;
     if (!rows.length) h += `<div class="none">${sec === '找' ? '這天沒有要找的新牙套。' : sec === '約' ? '這天沒有隱適美病人。' : '最近一個月沒有寄來的牙套。'}</div>`;
     const taken = sec === '到' ? rows.filter(([r]) => /^病人已拿/.test(r.gray || '') && !(data.nt || {})[r.key]) : [];   // 病人已拿的收成一行，點開才看（2026-11-21 使用者）
     for (const e of rows) if (!taken.includes(e)) h += rowHtml(e[0], e[1]);
